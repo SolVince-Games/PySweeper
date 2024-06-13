@@ -42,6 +42,30 @@ pieces = {
     "f":pygame.image.load(f'images/flag.png').convert_alpha(),
     "h":pygame.image.load(f'images/hidden.png').convert_alpha()
 }
+text = {
+    "0":pygame.image.load(f'images/text/0.png').convert_alpha(),
+    "1":pygame.image.load(f'images/text/1.png').convert_alpha(),
+    "2":pygame.image.load(f'images/text/2.png').convert_alpha(),
+    "3":pygame.image.load(f'images/text/3.png').convert_alpha(),
+    "4":pygame.image.load(f'images/text/4.png').convert_alpha(),
+    "5":pygame.image.load(f'images/text/5.png').convert_alpha(),
+    "6":pygame.image.load(f'images/text/6.png').convert_alpha(),
+    "7":pygame.image.load(f'images/text/7.png').convert_alpha(),
+    "8":pygame.image.load(f'images/text/8.png').convert_alpha(),
+    "9":pygame.image.load(f'images/text/9.png').convert_alpha()
+}
+smiley = {
+    "normal":pygame.image.load(f'images/smiley/normal.png').convert_alpha(),
+    "dead":pygame.image.load(f'images/smiley/dead.png').convert_alpha(),
+    "pressed":pygame.image.load(f'images/smiley/pressed.png').convert_alpha(),
+    "shock":pygame.image.load(f'images/smiley/shock.png').convert_alpha(),
+    "win":pygame.image.load(f'images/smiley/win.png').convert_alpha()
+}
+smileySprite = pygame.sprite.Sprite()
+smileySprite.image = smiley['normal']
+smileySprite.rect = smileySprite.image.get_rect()
+smileySprite.rect.top = 16
+smileySprite.rect.centerx = screen.get_width() // 2
 
 sounds = {
     # "":pygame.mixer.Sound('sounds/.mp3')
@@ -60,12 +84,13 @@ controls = {
 # --- Define variables ---
 frameRate = 60
 
-global mapWidth,mapHeight,totalBombs,flagged
-global spriteGroup,mode
+global mapWidth,mapHeight,totalBombs
+global flagged,mode,timer,frame,firstClick
+global spriteGroup
 global running,closed,replay
 
 def resetVars():
-    global mapWidth,mapHeight,totalBombs,flagged,running,closed,replay,sprites,spriteGroup,mode
+    global mapWidth,mapHeight,totalBombs,flagged,running,closed,replay,sprites,spriteGroup,mode,timer,frame,firstClick
     mapWidth = 16
     mapHeight = 16
     totalBombs = 40
@@ -76,6 +101,9 @@ def resetVars():
     sprites = []
     spriteGroup = pygame.sprite.Group()
     mode = 'clear'
+    timer = 0
+    frame = 0
+    firstClick = True
 resetVars()
 # --- Define variables ---
 
@@ -131,6 +159,12 @@ def getInp(control_scheme):
         if keys[key]:
             return True
     return False
+# Get any digit number
+def digits(num: int, digits: int) -> str:
+    out = str(num)
+    while len(out) < digits:
+        out = '0'+out
+    return out
 
 # Main game loop
 while replay:
@@ -147,10 +181,16 @@ while replay:
     closed = False
     while running and not closed:
         clock.tick(frameRate)
-
+        frame += 1
+        if frame > frameRate:
+            frame = 0
+            timer += 1
+            if timer > 999:
+                running = False
         # Get sprites and positions for clicking + rendering
         sprites = []
         spriteGroup.empty()
+        spriteGroup.add(smileySprite)
         (startX,startY) = (12,55)
         y = 0
         for row in tileMap:
@@ -186,22 +226,50 @@ while replay:
                         mode = 'flag'
                     else:
                         mode = 'clear'
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                [mouseX,mouseY] = pygame.mouse.get_pos()
+                mouseX = mouseX // (display.get_width() // screen.get_width()) # because the window is scaled we need to adapt the mouse pos on the scaled window to a pos on the non scaled game
+                mouseY = mouseY // (display.get_width() // screen.get_width()) # ^
+                if smileySprite.rect.collidepoint((mouseX,mouseY)):
+                    smileySprite.image = smiley['pressed']
+                elif firstClick:
+                    for sprite in sprites:
+                        if sprite.rect.collidepoint((mouseX,mouseY)):
+                            smileySprite.image = smiley['shock']
+                            break
             if event.type == pygame.MOUSEBUTTONUP:
                 [mouseX,mouseY] = pygame.mouse.get_pos()
                 mouseX = mouseX // (display.get_width() // screen.get_width()) # because the window is scaled we need to adapt the mouse pos on the scaled window to a pos on the non scaled game
                 mouseY = mouseY // (display.get_width() // screen.get_width()) # ^
-                for sprite in sprites:
-                    if sprite.rect.collidepoint((mouseX,mouseY)):
-                        tile = getTileonMap(sprite.x,sprite.y)
-                        if mode == 'clear':
-                            if len(tile) == 2:
-                                if tile[1] == 'h':
-                                    setTileonMap(sprite.x,sprite.y,tile[0])
-                        else:
-                            if len(tile) == 2:
-                                if tile[1] == 'h':
-                                    setTileonMap(sprite.x,sprite.y,tile[0]+'f')
-                        break
+                smileySprite.image = smiley['normal']
+                if smileySprite.rect.collidepoint((mouseX,mouseY)):
+                    timer = 0
+                else:
+                    for sprite in sprites:
+                        if sprite.rect.collidepoint((mouseX,mouseY)):
+                            tile = getTileonMap(sprite.x,sprite.y)
+                            if mode == 'clear':
+                                if len(tile) == 2:
+                                    if tile[1] == 'h':
+                                        setTileonMap(sprite.x,sprite.y,tile[0])
+                                        if tile[0] == 'b':
+                                            if firstClick:
+                                                print('bad luck') # do firstclick bomb logic
+                                            else:
+                                                print('death') # do death logic
+                                                smileySprite.image = smiley['dead']
+                                        if firstClick:
+                                            firstClick = False
+                                            
+                            else:
+                                if len(tile) == 2:
+                                    if tile[1] == 'h':
+                                        setTileonMap(sprite.x,sprite.y,tile[0]+'f')
+                                        flagged += 1
+                                    elif tile[1] == 'f':
+                                        setTileonMap(sprite.x,sprite.y,tile[0]+'h')
+                                        flagged -= 1
+                            break
             # - Input -
         # -- Events --
 
@@ -259,7 +327,22 @@ while replay:
         pygame.draw.rect(screen, (255,255,255), pygame.Rect(display_width-10, 53, 1, 1)) # right overlap
             # - Field -
         # -- Frames --
-        spriteGroup.draw(screen) # Tiles
+        # -- Numbers --
+            # - Left -
+        gap = 0
+        for char in digits(totalBombs-flagged,3):
+            screen.blit(text[char],(17+gap,16))
+            gap += 13
+            # - Left -
+            # - Right -
+        gap = 0
+        for char in digits(timer,3):
+            screen.blit(text[char],(display_width-56+gap,16))
+            gap += 13
+            # - Right -
+        # -- Numbers --
+        smileySprite.rect.centerx = screen.get_width() // 2 # Smiley
+        spriteGroup.draw(screen) # Tiles + Smiley
         scaled = pygame.transform.scale(screen, display.get_size())
         display.blit(scaled, (0, 0))
         pygame.display.flip()
