@@ -7,7 +7,7 @@ import os
 pygame.init()
 clock = pygame.time.Clock()
 
-# Create window
+# --- Create window ---
 global display_width,display_height
 
 def setSize(x: int,y: int):
@@ -20,15 +20,12 @@ def setScale(scale: int):
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     return pygame.display.set_mode((scale*display_width, scale*display_height))
 
-# display = setSize(152,81)
 display = setSize(280,323)
 setScale(1)
 pygame.display.set_caption('PySweeper')
+# --- Create window ---
 
-
-
-
-# Load assets
+# --- Load assets ---
 screen = pygame.Surface((display_width,display_height))
 
 pieces = {
@@ -49,7 +46,7 @@ pieces = {
 sounds = {
     # "":pygame.mixer.Sound('sounds/.mp3')
 }
-
+# --- Load assets ---
 
 
 
@@ -60,8 +57,7 @@ controls = {
 }
 
 
-# Define variables
-
+# --- Define variables ---
 frameRate = 60
 
 global mapWidth,mapHeight,totalBombs,flagged
@@ -81,12 +77,11 @@ def resetVars():
     spriteGroup = pygame.sprite.Group()
     mode = 'clear'
 resetVars()
+# --- Define variables ---
 
 
 
-
-# Map storage
-
+# --- Map storage ---
 tileMap = []
 def clearMap():
     global tileMap
@@ -127,10 +122,9 @@ def populateMap():
                     neighborTile = getTileonMap(x+neighborX,y+neighborY)[0]
                     if neighborTile.isnumeric():
                         setTileonMap(x+neighborX,y+neighborY,str(int(neighborTile)+1)+'h')
+# --- Map storage ---
 
-
-
-
+# Input
 def getInp(control_scheme):
     keys = pygame.key.get_pressed()
     for key in controls[control_scheme]:
@@ -154,7 +148,7 @@ while replay:
     while running and not closed:
         clock.tick(frameRate)
 
-        # Get sprites
+        # Get sprites and positions for clicking + rendering
         sprites = []
         spriteGroup.empty()
         (startX,startY) = (12,55)
@@ -194,8 +188,8 @@ while replay:
                         mode = 'clear'
             if event.type == pygame.MOUSEBUTTONUP:
                 [mouseX,mouseY] = pygame.mouse.get_pos()
-                mouseX = mouseX // (display.get_width() // screen.get_width())
-                mouseY = mouseY // (display.get_width() // screen.get_width())
+                mouseX = mouseX // (display.get_width() // screen.get_width()) # because the window is scaled we need to adapt the mouse pos on the scaled window to a pos on the non scaled game
+                mouseY = mouseY // (display.get_width() // screen.get_width()) # ^
                 for sprite in sprites:
                     if sprite.rect.collidepoint((mouseX,mouseY)):
                         tile = getTileonMap(sprite.x,sprite.y)
